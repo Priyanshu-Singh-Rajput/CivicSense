@@ -1,0 +1,25 @@
+# Python virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Environment variables & secrets (CRITICAL)
+.env
+.env.local
+*.env
+
+# Operating system / IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Local data overrides if needed (keep complaints.json committed as starter unless configured otherwise)
+# complaints_local.json

@@ -1,0 +1,41 @@
+[
+  {
+    "id": "c-ed840b6d44",
+    "description": "damaged road with potholes near flyover in ratu road",
+    "location": "ratu road",
+    "category": "Other",
+    "severity": "Medium",
+    "department": "Municipal Grievance Cell (Manual Triage)",
+    "summary": "damaged road with potholes near flyover in ratu road",
+    "recommended_action": "Manual review required: Assign to civic inspection officer for on-ground verification.",
+    "status": "In Progress",
+    "ai_status": "unavailable",
+    "created_at": "2026-10-10T06:29:40.975766+00:00"
+  },
+  {
+    "id": "c-9624f84297",
+    "description": "Broken streetlight on 4th Main Road causing safety hazard at night",
+    "location": "4th Main Road, Near Central Park",
+    "category": "Electricity",
+    "severity": "Medium",
+    "department": "Electrical Department",
+    "summary": "A broken streetlight on 4th Main Road near Central Park is creating a safety hazard during the night.",
+    "recommended_action": "Dispatch a technician to inspect and replace the faulty bulb or repair the electrical connection.",
+    "status": "In Progress",
+    "ai_status": "success",
+    "created_at": "2026-10-10T06:35:54.274339+00:00"
+  },
+  {
+    "id": "c-3188a388e6",
+    "description": "The drainage of piska more is overflowing",
+    "location": "piska more",
+    "category": "Drainage",
+    "severity": "Medium",
+    "department": "Drainage Department",
+    "summary": "The drainage system at Piska More is overflowing.",
+    "recommended_action": "Dispatch a maintenance crew to inspect for blockages and clear the drainage system.",
+    "status": "Pending",
+    "ai_status": "success",
+    "created_at": "2026-10-10T06:45:34.596111+00:00"
+  }
+]

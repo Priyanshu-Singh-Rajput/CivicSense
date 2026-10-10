@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Civisense — AI-Assisted Civic Complaint Management</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Google Fonts for crisp civic typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon" aria-hidden="true">🏛️</div>
+                <div class="brand-text">
+                    <span class="brand-title">Civisense</span>
+                    <span class="brand-tagline">Civic Management</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Main Navigation">
+                <button class="nav-item active" id="nav-dashboard" type="button">
+                    <span class="nav-icon" aria-hidden="true">📊</span>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-item" id="nav-all-complaints" type="button">
+                    <span class="nav-icon" aria-hidden="true">📋</span>
+                    <span>All Complaints</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-action">
+                <button class="btn btn-primary btn-block" id="sidebar-report-btn" type="button">
+                    <span aria-hidden="true">➕</span>
+                    <span>Report an Issue</span>
+                </button>
+            </div>
+
+            <div class="sidebar-footer">
+                <p>AI-Assisted Civic Complaint Management Demo</p>
+                <small>Powered by Gemma & Flask</small>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <div class="header-titles">
+                    <h1 class="page-title">Civic Complaint Dashboard</h1>
+                    <p class="page-subtitle">Real-time municipal grievance triage, AI assessment, and authority resolution.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" id="refresh-btn" type="button" title="Refresh dashboard data">
+                        <span aria-hidden="true">🔄</span>
+                        <span>Refresh</span>
+                    </button>
+                    <button class="btn btn-primary" id="header-report-btn" type="button">
+                        <span aria-hidden="true">➕</span>
+                        <span>Report an Issue</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Notifications Toast Area -->
+            <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+            <!-- Summary Cards Section -->
+            <section class="metrics-grid" aria-label="Summary Statistics">
+                <div class="metric-card metric-total">
+                    <div class="metric-icon" aria-hidden="true">📑</div>
+                    <div class="metric-info">
+                        <span class="metric-label">Total Complaints</span>
+                        <span class="metric-value" id="stat-total">0</span>
+                    </div>
+                </div>
+
+                <div class="metric-card metric-high-priority">
+                    <div class="metric-icon" aria-hidden="true">🚨</div>
+                    <div class="metric-info">
+                        <span class="metric-label">High Priority</span>
+                        <span class="metric-value" id="stat-high-priority">0</span>
+                    </div>
+                </div>
+
+                <div class="metric-card metric-pending">
+                    <div class="metric-icon" aria-hidden="true">⏳</div>
+                    <div class="metric-info">
+                        <span class="metric-label">Pending</span>
+                        <span class="metric-value" id="stat-pending">0</span>
+                    </div>
+                </div>
+
+                <div class="metric-card metric-resolved">
+                    <div class="metric-icon" aria-hidden="true">✅</div>
+                    <div class="metric-info">
+                        <span class="metric-label">Resolved</span>
+                        <span class="metric-value" id="stat-resolved">0</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Filter & Search Toolbar -->
+            <section class="toolbar-card" aria-label="Filters and Search">
+                <div class="search-box">
+                    <span class="search-icon" aria-hidden="true">🔍</span>
+                    <input
+                        type="text"
+                        id="search-input"
+                        class="form-control"
+                        placeholder="Search by ID, description, location, or department..."
+                        aria-label="Search complaints"
+                    >
+                </div>
+
+                <div class="filters-group">
+                    <div class="filter-item">
+                        <label for="filter-status" class="filter-label">Status</label>
+                        <select id="filter-status" class="form-select">
+                            <option value="">All Statuses</option>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="filter-severity" class="filter-label">Severity</label>
+                        <select id="filter-severity" class="form-select">
+                            <option value="">All Severities</option>
+                            <option value="Critical">Critical</option>
+                            <option value="High">High</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <label for="filter-category" class="filter-label">Category</label>
+                        <select id="filter-category" class="form-select">
+                            <option value="">All Categories</option>
+                            <option value="Road">Road</option>
+                            <option value="Drainage">Drainage</option>
+                            <option value="Electricity">Electricity</option>
+                            <option value="Water Supply">Water Supply</option>
+                            <option value="Sanitation">Sanitation</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-outline" id="clear-filters-btn" type="button">Clear Filters</button>
+                </div>
+            </section>
+
+            <!-- Complaints Feed Section -->
+            <section class="complaints-section" aria-label="Complaints List">
+                <div class="section-header">
+                    <h2 class="section-title">Submitted Complaints</h2>
+                    <span class="results-count" id="results-count">Showing 0 complaints</span>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loading-state" class="state-container" style="display: none;">
+                    <div class="spinner" aria-hidden="true"></div>
+                    <p>Loading complaints from database...</p>
+                </div>
+
+                <!-- Error State -->
+                <div id="error-state" class="state-container state-error" style="display: none;">
+                    <span class="state-icon" aria-hidden="true">⚠️</span>
+                    <h3 id="error-message-title">Unable to connect to server</h3>
+                    <p id="error-message-detail">Please ensure the Flask backend is running and try again.</p>
+                    <button class="btn btn-primary" id="retry-btn" type="button">Retry</button>
+                </div>
+
+                <!-- Empty State -->
+                <div id="empty-state" class="state-container" style="display: none;">
+                    <span class="state-icon" aria-hidden="true">📭</span>
+                    <h3>No complaints found</h3>
+                    <p id="empty-state-message">No complaints have been reported yet. Click "Report an Issue" to lodge a citizen grievance.</p>
+                </div>
+
+                <!-- Complaints Cards Container -->
+                <div id="complaints-list" class="complaints-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal 1: Report an Issue -->
+    <div id="report-modal" class="modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="report-modal-title">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <h2 id="report-modal-title" class="modal-title">Report a Civic Problem</h2>
+                    <p class="modal-subtitle">Submit details of infrastructure damage, utility disruption, or hazards.</p>
+                </div>
+                <button type="button" class="modal-close-btn" id="report-modal-close" aria-label="Close modal">&times;</button>
+            </div>
+
+            <form id="report-form" novalidate>
+                <div class="form-group">
+                    <div class="label-row">
+                        <label for="complaint-description" class="form-label">Problem Description <span class="required-star">*</span></label>
+                        <span class="char-count" id="desc-char-count">0 / 2000</span>
+                    </div>
+                    <textarea
+                        id="complaint-description"
+                        class="form-control textarea"
+                        rows="4"
+                        placeholder="Describe the civic problem, such as a damaged road, overflowing drain, broken streetlight, or water supply issue."
+                        maxlength="2000"
+                        required
+                    ></textarea>
+                    <div class="field-error" id="desc-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <div class="label-row">
+                        <label for="complaint-location" class="form-label">Location / Landmark <span class="required-star">*</span></label>
+                        <span class="char-count" id="loc-char-count">0 / 200</span>
+                    </div>
+                    <input
+                        type="text"
+                        id="complaint-location"
+                        class="form-control"
+                        placeholder="Enter the area, street, landmark, or locality."
+                        maxlength="200"
+                        required
+                    >
+                    <div class="field-error" id="loc-error"></div>
+                </div>
+
+                <div class="ai-notice-box">
+                    <span class="ai-notice-icon" aria-hidden="true">🤖</span>
+                    <p>Upon submission, Gemma AI will automatically assess category, severity, and recommend next actions for municipal teams.</p>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="report-modal-cancel">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="report-submit-btn">
+                        <span id="submit-spinner" class="btn-spinner" style="display: none;" aria-hidden="true"></span>
+                        <span id="submit-btn-text">Submit Complaint</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: Complaint Details & Status Action Drawer/Modal -->
+    <div id="details-modal" class="modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="details-modal-title">
+        <div class="modal-card modal-lg">
+            <div class="modal-header">
+                <div>
+                    <div class="details-top-badges" id="details-top-badges"></div>
+                    <h2 id="details-modal-title" class="modal-title">Complaint Details</h2>
+                    <span class="details-id" id="details-id-text">ID: --</span>
+                </div>
+                <button type="button" class="modal-close-btn" id="details-modal-close" aria-label="Close modal">&times;</button>
+            </div>
+
+            <div class="modal-body" id="details-body">
+                <!-- Dynamically populated via script.js safe DOM updates -->
+            </div>
+
+            <div class="modal-footer details-footer">
+                <div class="status-updater-section">
+                    <label for="update-status-select" class="form-label update-label">Update Complaint Status:</label>
+                    <div class="update-action-row">
+                        <select id="update-status-select" class="form-select status-select">
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                        </select>
+                        <button type="button" class="btn btn-primary" id="save-status-btn">Update Status</button>
+                    </div>
+                    <div class="field-error" id="status-update-error"></div>
+                </div>
+                <button type="button" class="btn btn-secondary" id="details-close-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
