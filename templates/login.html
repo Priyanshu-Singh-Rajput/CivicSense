@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Civisense — Secure Portal Login</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <!-- Google Fonts for crisp civic typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="auth-page-body">
+    <!-- Ambient Background Glow Circles -->
+    <div class="auth-ambient-orb orb-primary" aria-hidden="true"></div>
+    <div class="auth-ambient-orb orb-secondary" aria-hidden="true"></div>
+
+    <main class="auth-layout">
+        <!-- Top Civic Brand Header -->
+        <header class="auth-brand-header">
+            <a href="/" class="auth-brand-link" title="Return to Dashboard">
+                <div class="brand-icon" aria-hidden="true">🏛️</div>
+                <div class="brand-text">
+                    <span class="brand-title">Civisense</span>
+                    <span class="brand-tagline">AI Civic Grievance Management</span>
+                </div>
+            </a>
+            <div class="auth-badge-status">
+                <span class="status-pulse-dot" aria-hidden="true"></span>
+                <span>Portal Online</span>
+            </div>
+        </header>
+
+        <!-- Main Glassmorphic Login Card -->
+        <div class="auth-card">
+            <!-- Card Header -->
+            <div class="auth-card-header">
+                <h1 class="auth-title" id="auth-main-title">Portal Authentication</h1>
+                <p class="auth-subtitle" id="auth-main-subtitle">Choose your access role to sign in or register.</p>
+            </div>
+
+            <!-- Role Selector Tabs -->
+            <div class="role-selector-tabs" role="tablist" aria-label="Portal Access Roles">
+                <button type="button" class="role-tab active" id="role-tab-officer" role="tab" aria-selected="true" data-role="officer">
+                    <span class="role-icon" aria-hidden="true">🏛️</span>
+                    <div class="role-meta">
+                        <span class="role-title">Municipal Officer</span>
+                        <span class="role-desc">Triage, Status & Resolution</span>
+                    </div>
+                </button>
+                <button type="button" class="role-tab" id="role-tab-citizen" role="tab" aria-selected="false" data-role="citizen">
+                    <span class="role-icon" aria-hidden="true">👤</span>
+                    <div class="role-meta">
+                        <span class="role-title">Citizen</span>
+                        <span class="role-desc">Report & Track Issues</span>
+                    </div>
+                </button>
+            </div>
+
+            <!-- One-Click Instant Demo Credentials Bar -->
+            <div class="quick-demo-box" id="quick-demo-box">
+                <div class="quick-demo-header">
+                    <span class="demo-lightning" aria-hidden="true">⚡</span>
+                    <span class="demo-label">One-Click Hackathon Demo Credentials</span>
+                </div>
+                <div class="quick-demo-buttons">
+                    <button type="button" class="btn-demo-quick" id="btn-quick-officer" title="Fill Officer credentials">
+                        <span class="badge-role-pill officer">Officer</span>
+                        <span class="demo-user-text">officer@civisense.gov</span>
+                        <span class="demo-click-label">Click to Fill</span>
+                    </button>
+                    <button type="button" class="btn-demo-quick" id="btn-quick-citizen" title="Fill Citizen credentials">
+                        <span class="badge-role-pill citizen">Citizen</span>
+                        <span class="demo-user-text">citizen@civisense.org</span>
+                        <span class="demo-click-label">Click to Fill</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mode Switcher (Sign In vs Register) -->
+            <div class="auth-mode-switch">
+                <button type="button" class="mode-link active" id="tab-mode-signin">Sign In</button>
+                <span class="mode-divider" aria-hidden="true">|</span>
+                <button type="button" class="mode-link" id="tab-mode-register">Create Citizen Account</button>
+            </div>
+
+            <!-- Alert / Error Banner -->
+            <div id="auth-alert" class="auth-alert" style="display: none;" role="alert">
+                <span class="auth-alert-icon" id="auth-alert-icon" aria-hidden="true">⚠️</span>
+                <span class="auth-alert-msg" id="auth-alert-msg"></span>
+            </div>
+
+            <!-- Sign In Form -->
+            <form id="signin-form" class="auth-form" novalidate>
+                <div class="form-group">
+                    <label for="signin-email" class="form-label">Email Address <span class="required-star">*</span></label>
+                    <div class="input-with-icon">
+                        <span class="input-icon" aria-hidden="true">✉️</span>
+                        <input
+                            type="email"
+                            id="signin-email"
+                            class="form-control auth-input"
+                            placeholder="officer@civisense.gov"
+                            autocomplete="username"
+                            required
+                        >
+                    </div>
+                    <div class="field-error" id="signin-email-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <div class="label-row">
+                        <label for="signin-password" class="form-label">Password <span class="required-star">*</span></label>
+                        <button type="button" class="btn-link-subtle" id="btn-autofill-current-pwd">Autofill Demo Password</button>
+                    </div>
+                    <div class="input-with-icon">
+                        <span class="input-icon" aria-hidden="true">🔒</span>
+                        <input
+                            type="password"
+                            id="signin-password"
+                            class="form-control auth-input"
+                            placeholder="Enter password"
+                            autocomplete="current-password"
+                            required
+                        >
+                        <button type="button" class="btn-toggle-pwd" id="btn-toggle-signin-pwd" aria-label="Toggle password visibility">
+                            👁️
+                        </button>
+                    </div>
+                    <div class="field-error" id="signin-password-error"></div>
+                </div>
+
+                <div class="form-meta-row">
+                    <label class="remember-label">
+                        <input type="checkbox" id="signin-remember" checked>
+                        <span>Keep me signed in</span>
+                    </label>
+                    <span class="role-indicator-badge" id="role-indicator-badge">
+                        Signing in as: <strong>Municipal Officer</strong>
+                    </span>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block btn-auth-submit" id="signin-submit-btn">
+                    <span id="signin-spinner" class="btn-spinner" style="display: none;" aria-hidden="true"></span>
+                    <span id="signin-btn-text">Sign In to CivicSense</span>
+                </button>
+            </form>
+
+            <!-- Register Citizen Form (Hidden initially) -->
+            <form id="register-form" class="auth-form" style="display: none;" novalidate>
+                <div class="form-group">
+                    <label for="reg-name" class="form-label">Full Name <span class="required-star">*</span></label>
+                    <div class="input-with-icon">
+                        <span class="input-icon" aria-hidden="true">👤</span>
+                        <input
+                            type="text"
+                            id="reg-name"
+                            class="form-control auth-input"
+                            placeholder="e.g. Ramesh Kumar"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+                    <div class="field-error" id="reg-name-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-email" class="form-label">Email Address <span class="required-star">*</span></label>
+                    <div class="input-with-icon">
+                        <span class="input-icon" aria-hidden="true">✉️</span>
+                        <input
+                            type="email"
+                            id="reg-email"
+                            class="form-control auth-input"
+                            placeholder="citizen@civisense.org"
+                            maxlength="150"
+                            required
+                        >
+                    </div>
+                    <div class="field-error" id="reg-email-error"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-phone" class="form-label">Mobile Phone (Optional for SMS updates)</label>
+                    <div class="input-with-icon">
+                        <span class="input-icon" aria-hidden="true">📱</span>
+                        <input
+                            type="tel"
+                            id="reg-phone"
+                            class="form-control auth-input"
+                            placeholder="+91 98765 43210"
+                            maxlength="20"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="reg-password" class="form-label">Create Password <span class="required-star">*</span></label>
+                    <div class="input-with-icon">
+                        <span class="input-icon" aria-hidden="true">🔒</span>
+                        <input
+                            type="password"
+                            id="reg-password"
+                            class="form-control auth-input"
+                            placeholder="At least 6 characters"
+                            minlength="6"
+                            required
+                        >
+                        <button type="button" class="btn-toggle-pwd" id="btn-toggle-reg-pwd" aria-label="Toggle password visibility">
+                            👁️
+                        </button>
+                    </div>
+                    <div class="field-error" id="reg-password-error"></div>
+                </div>
+
+                <div class="citizen-privilege-note">
+                    <span class="privilege-icon" aria-hidden="true">🛡️</span>
+                    <p>Citizens can report road damage, drainage blocks, and municipal hazards with GPS photo verification and track live resolution.</p>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block btn-auth-submit" id="reg-submit-btn">
+                    <span id="reg-spinner" class="btn-spinner" style="display: none;" aria-hidden="true"></span>
+                    <span id="reg-btn-text">Register Citizen Account</span>
+                </button>
+            </form>
+
+            <!-- Card Footer -->
+            <div class="auth-card-footer">
+                <a href="/" class="btn-back-dashboard">
+                    <span aria-hidden="true">←</span>
+                    <span>Continue as Guest to Public Dashboard</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Footer Credits -->
+        <footer class="auth-portal-footer">
+            <p>Civisense AI-Assisted Civic Complaint Management &bull; Built with Flask & Gemma AI</p>
+            <p><small>&copy; 2026 Civisense Civic Platform</small></p>
+        </footer>
+    </main>
+
+    <!-- Login Page Logic Script -->
+    <script>
+        (function() {
+            // State
+            let currentRole = "officer"; // "officer" | "citizen"
+            let currentMode = "signin"; // "signin" | "register"
+
+            // DOM Elements
+            const roleTabOfficer = document.getElementById("role-tab-officer");
+            const roleTabCitizen = document.getElementById("role-tab-citizen");
+            const quickDemoBox = document.getElementById("quick-demo-box");
+            const btnQuickOfficer = document.getElementById("btn-quick-officer");
+            const btnQuickCitizen = document.getElementById("btn-quick-citizen");
+            const tabModeSignin = document.getElementById("tab-mode-signin");
+            const tabModeRegister = document.getElementById("tab-mode-register");
+            const signinForm = document.getElementById("signin-form");
+            const registerForm = document.getElementById("register-form");
+            const authAlert = document.getElementById("auth-alert");
+            const authAlertIcon = document.getElementById("auth-alert-icon");
+            const authAlertMsg = document.getElementById("auth-alert-msg");
+            const signinEmail = document.getElementById("signin-email");
+            const signinPassword = document.getElementById("signin-password");
+            const signinSubmitBtn = document.getElementById("signin-submit-btn");
+            const signinSpinner = document.getElementById("signin-spinner");
+            const signinBtnText = document.getElementById("signin-btn-text");
+            const roleIndicatorBadge = document.getElementById("role-indicator-badge");
+            const btnAutofillCurrentPwd = document.getElementById("btn-autofill-current-pwd");
+            const btnToggleSigninPwd = document.getElementById("btn-toggle-signin-pwd");
+            const btnToggleRegPwd = document.getElementById("btn-toggle-reg-pwd");
+            const regName = document.getElementById("reg-name");
+            const regEmail = document.getElementById("reg-email");
+            const regPhone = document.getElementById("reg-phone");
+            const regPassword = document.getElementById("reg-password");
+            const regSubmitBtn = document.getElementById("reg-submit-btn");
+            const regSpinner = document.getElementById("reg-spinner");
+            const regBtnText = document.getElementById("reg-btn-text");
+
+            // Helper: Show Alert Banner
+            function showAlert(message, type = "error") {
+                authAlert.style.display = "flex";
+                authAlert.className = `auth-alert auth-alert-${type}`;
+                authAlertIcon.textContent = type === "success" ? "✅" : "⚠️";
+                authAlertMsg.textContent = message;
+            }
+
+            function hideAlert() {
+                authAlert.style.display = "none";
+                authAlertMsg.textContent = "";
+            }
+
+            // Role Switcher
+            function setRole(role) {
+                currentRole = role;
+                if (role === "officer") {
+                    roleTabOfficer.classList.add("active");
+                    roleTabOfficer.setAttribute("aria-selected", "true");
+                    roleTabCitizen.classList.remove("active");
+                    roleTabCitizen.setAttribute("aria-selected", "false");
+                    roleIndicatorBadge.innerHTML = 'Signing in as: <strong>Municipal Officer</strong>';
+                    signinEmail.placeholder = "officer@civisense.gov";
+                    // If in register mode, automatically switch to signin because officers can't register on public portal
+                    if (currentMode === "register") {
+                        setMode("signin");
+                    }
+                } else {
+                    roleTabCitizen.classList.add("active");
+                    roleTabCitizen.setAttribute("aria-selected", "true");
+                    roleTabOfficer.classList.remove("active");
+                    roleTabOfficer.setAttribute("aria-selected", "false");
+                    roleIndicatorBadge.innerHTML = 'Signing in as: <strong>Citizen Reporter</strong>';
+                    signinEmail.placeholder = "citizen@civisense.org";
+                }
+                hideAlert();
+            }
+
+            roleTabOfficer.addEventListener("click", () => setRole("officer"));
+            roleTabCitizen.addEventListener("click", () => setRole("citizen"));
+
+            // Mode Switcher (Sign In vs Register)
+            function setMode(mode) {
+                currentMode = mode;
+                hideAlert();
+                if (mode === "signin") {
+                    tabModeSignin.classList.add("active");
+                    tabModeRegister.classList.remove("active");
+                    signinForm.style.display = "flex";
+                    registerForm.style.display = "none";
+                    quickDemoBox.style.display = "block";
+                    document.getElementById("auth-main-title").textContent = "Portal Authentication";
+                    document.getElementById("auth-main-subtitle").textContent = "Choose your access role to sign in or register.";
+                } else {
+                    tabModeRegister.classList.add("active");
+                    tabModeSignin.classList.remove("active");
+                    signinForm.style.display = "none";
+                    registerForm.style.display = "flex";
+                    quickDemoBox.style.display = "none";
+                    setRole("citizen"); // registration is citizen only
+                    document.getElementById("auth-main-title").textContent = "Citizen Account Registration";
+                    document.getElementById("auth-main-subtitle").textContent = "Create an account to track your submitted civic reports.";
+                }
+            }
+
+            tabModeSignin.addEventListener("click", () => setMode("signin"));
+            tabModeRegister.addEventListener("click", () => setMode("register"));
+
+            // One-Click Demo Logins
+            btnQuickOfficer.addEventListener("click", () => {
+                setRole("officer");
+                signinEmail.value = "officer@civisense.gov";
+                signinPassword.value = "officer123";
+                hideAlert();
+                triggerLogin();
+            });
+
+            btnQuickCitizen.addEventListener("click", () => {
+                setRole("citizen");
+                signinEmail.value = "citizen@civisense.org";
+                signinPassword.value = "citizen123";
+                hideAlert();
+                triggerLogin();
+            });
+
+            btnAutofillCurrentPwd.addEventListener("click", () => {
+                if (currentRole === "officer") {
+                    signinPassword.value = "officer123";
+                } else {
+                    signinPassword.value = "citizen123";
+                }
+            });
+
+            // Toggle Password Visibility
+            btnToggleSigninPwd.addEventListener("click", () => {
+                const isPassword = signinPassword.type === "password";
+                signinPassword.type = isPassword ? "text" : "password";
+                btnToggleSigninPwd.textContent = isPassword ? "🙈" : "👁️";
+            });
+
+            btnToggleRegPwd.addEventListener("click", () => {
+                const isPassword = regPassword.type === "password";
+                regPassword.type = isPassword ? "text" : "password";
+                btnToggleRegPwd.textContent = isPassword ? "🙈" : "👁️";
+            });
+
+            // Perform Login API Call
+            async function triggerLogin() {
+                const email = signinEmail.value.trim();
+                const password = signinPassword.value.trim();
+
+                if (!email) {
+                    showAlert("Please enter your email address.");
+                    signinEmail.focus();
+                    return;
+                }
+                if (!password) {
+                    showAlert("Please enter your password.");
+                    signinPassword.focus();
+                    return;
+                }
+
+                hideAlert();
+                signinSubmitBtn.disabled = true;
+                signinSpinner.style.display = "inline-block";
+                signinBtnText.textContent = "Authenticating...";
+
+                try {
+                    const response = await fetch("/api/auth/login", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            email: email,
+                            password: password,
+                            role: currentRole
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || "Authentication failed. Please verify credentials.");
+                    }
+
+                    showAlert(`Welcome, ${data.user.name}! Redirecting to dashboard...`, "success");
+                    setTimeout(() => {
+                        window.location.href = "/";
+                    }, 800);
+
+                } catch (err) {
+                    showAlert(err.message, "error");
+                    signinSubmitBtn.disabled = false;
+                    signinSpinner.style.display = "none";
+                    signinBtnText.textContent = "Sign In to CivicSense";
+                }
+            }
+
+            signinForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                triggerLogin();
+            });
+
+            // Citizen Registration API Call
+            registerForm.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const name = regName.value.trim();
+                const email = regEmail.value.trim();
+                const phone = regPhone.value.trim();
+                const password = regPassword.value.trim();
+
+                if (!name || name.length < 2) {
+                    showAlert("Please enter your full name (minimum 2 characters).");
+                    regName.focus();
+                    return;
+                }
+                if (!email || !email.includes("@")) {
+                    showAlert("Please enter a valid email address.");
+                    regEmail.focus();
+                    return;
+                }
+                if (!password || password.length < 6) {
+                    showAlert("Password must be at least 6 characters long.");
+                    regPassword.focus();
+                    return;
+                }
+
+                hideAlert();
+                regSubmitBtn.disabled = true;
+                regSpinner.style.display = "inline-block";
+                regBtnText.textContent = "Creating Account...";
+
+                try {
+                    const response = await fetch("/api/auth/register", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            name: name,
+                            email: email,
+                            phone: phone,
+                            password: password
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || "Registration failed.");
+                    }
+
+                    showAlert(`Account created for ${data.user.name}! Redirecting to dashboard...`, "success");
+                    setTimeout(() => {
+                        window.location.href = "/";
+                    }, 1000);
+
+                } catch (err) {
+                    showAlert(err.message, "error");
+                    regSubmitBtn.disabled = false;
+                    regSpinner.style.display = "none";
+                    regBtnText.textContent = "Register Citizen Account";
+                }
+            });
+
+            // Auto-check existing session
+            fetch("/api/auth/me")
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.authenticated && data.user) {
+                        showAlert(`You are already signed in as ${data.user.name} (${data.user.role}). Redirecting...`, "success");
+                        setTimeout(() => { window.location.href = "/"; }, 1200);
+                    }
+                })
+                .catch(() => {});
+        })();
+    </script>
+</body>
+</html>

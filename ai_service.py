@@ -43,13 +43,32 @@ VALID_SEVERITIES = {
     "Critical",
 }
 
-# Default Gemma model. Can be overridden via GEMMA_MODEL in .env
-# Verified supported model on Google GenAI API: "gemma-4-31b-it" or "gemma-4-26b-a4b-it"
-DEFAULT_MODEL = os.getenv("GEMMA_MODEL", "gemma-4-31b-it")
+# Default model and resilient fallback candidates. Can be overridden via GEMMA_MODEL in .env
+DEFAULT_MODEL = os.getenv("GEMMA_MODEL", "gemini-3.5-flash-lite")
+MODEL_FALLBACK_CANDIDATES = [
+    "gemini-3.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-flash-lite-latest",
+    "gemini-3.8-flash"
+]
 
 # Input length boundaries to prevent abuse/context overflows
 MAX_DESCRIPTION_LEN = 2000
 MAX_LOCATION_LEN = 250
+
+_cached_client = None
+_cached_api_key = None
+
+
+def get_genai_client(api_key: str):
+    """Reuses cached GenAI client instance to eliminate connection latency."""
+    global _cached_client, _cached_api_key
+    if _cached_client is not None and _cached_api_key == api_key:
+        return _cached_client
+    from google import genai
+    _cached_client = genai.Client(api_key=api_key)
+    _cached_api_key = api_key
+    return _cached_client
 
 
 def build_system_instruction() -> str:
@@ -212,55 +231,61 @@ def analyze_complaint(
             location
         )
 
-    # 3. Model Name Resolution
-    effective_model = model_name or os.getenv("GEMMA_MODEL") or DEFAULT_MODEL
+    # 3. Model Name Resolution & Fallback Cascade List
+    primary_model = model_name or os.getenv("GEMMA_MODEL") or DEFAULT_MODEL
+    models_to_try = [primary_model]
+    for candidate in MODEL_FALLBACK_CANDIDATES:
+        if candidate not in models_to_try:
+            models_to_try.append(candidate)
 
-    # 4. Invoke Google GenAI SDK
-    try:
-        from google import genai
-        from google.genai import types
+    # 4. Invoke Google GenAI SDK with automatic multi-model failover
+    from google.genai import types
+    client = get_genai_client(effective_api_key)
 
-        client = genai.Client(api_key=effective_api_key)
+    prompt_content = (
+        f"REPORTED CIVIC COMPLAINT:\n"
+        f"- Location: {location}\n"
+        f"- Description: {description}\n\n"
+        f"Please analyze this issue and return the required JSON object."
+    )
 
-        prompt_content = (
-            f"REPORTED CIVIC COMPLAINT:\n"
-            f"- Location: {location}\n"
-            f"- Description: {description}\n\n"
-            f"Please analyze this issue and return the required JSON object."
-        )
+    config = types.GenerateContentConfig(
+        system_instruction=build_system_instruction(),
+        temperature=0.1,  # Low temperature for deterministic classification
+        response_mime_type="application/json"
+    )
 
-        config = types.GenerateContentConfig(
-            system_instruction=build_system_instruction(),
-            temperature=0.1,  # Low temperature for deterministic classification
-            response_mime_type="application/json"
-        )
+    last_error_detail = None
 
-        response = client.models.generate_content(
-            model=effective_model,
-            contents=prompt_content,
-            config=config
-        )
-
-        raw_text = response.text or ""
-        validated_result = parse_response_text(raw_text)
-
-        if validated_result:
-            return validated_result
-        else:
-            return create_fallback_response(
-                f"Model response was malformed or failed schema validation: {raw_text[:200]}",
-                description,
-                location
+    for current_model in models_to_try:
+        try:
+            response = client.models.generate_content(
+                model=current_model,
+                contents=prompt_content,
+                config=config
             )
 
-    except Exception as exc:
-        err_msg = str(exc)
-        logger.error("Error during Gemma API call: %s", err_msg)
-        return create_fallback_response(
-            f"API error or model unavailable ({effective_model}): {err_msg}",
-            description,
-            location
-        )
+            raw_text = response.text or ""
+            validated_result = parse_response_text(raw_text)
+
+            if validated_result:
+                return validated_result
+            else:
+                last_error_detail = f"Model ({current_model}) response was malformed or failed schema validation: {raw_text[:200]}"
+                logger.warning(last_error_detail)
+                continue
+
+        except Exception as exc:
+            last_error_detail = f"Model ({current_model}) error: {exc}"
+            logger.warning("Error during AI call to %s: %s. Attempting fallback model...", current_model, exc)
+            continue
+
+    # If all models in the cascade failed or were unreachable:
+    return create_fallback_response(
+        f"AI service unavailable across all candidate models. Last detail: {last_error_detail}",
+        description,
+        location
+    )
 
 
 # =====================================================================
@@ -283,6 +308,11 @@ if __name__ == "__main__":
 
     # 2. Comprehensive Test Suite covering required scenarios
     class TestCivisenseAIService(unittest.TestCase):
+
+        def setUp(self):
+            global _cached_client, _cached_api_key
+            _cached_client = None
+            _cached_api_key = None
 
         def test_empty_description(self):
             """Test Case: Empty complaint description should yield unavailable status."""
