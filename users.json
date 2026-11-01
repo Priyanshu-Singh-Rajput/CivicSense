@@ -1,0 +1,44 @@
+[
+  {
+    "id": "u-officer-01",
+    "email": "officer@civisense.gov",
+    "password_hash": "scrypt:32768:8:1$nDiefwkNXCyz8Scs$5cc8a974a93c76e063c3c66334b3be7174993f69f4118f42475b8a2333785f8c63b922d29bd29d38165c9819ab82e96db752596a3fee3d473db7776fe56c8570",
+    "name": "Inspector Priya Sharma",
+    "role": "officer",
+    "department": "Public Works & Civic Triage",
+    "badge_id": "MNC-8492"
+  },
+  {
+    "id": "u-admin-01",
+    "email": "admin@civisense.gov",
+    "password_hash": "scrypt:32768:8:1$E2A1MpEXu4LtwL9O$739b5d354f054c8a3dfc671a336367790a632c7bb0da68a32732559bfae0e7b1ea7b398f8a265c64ed121875c6d76dce105c868cf06fe540ad3648796c2a3010",
+    "name": "Director Rajesh Khanna",
+    "role": "officer",
+    "department": "Municipal Commissioner Office",
+    "badge_id": "DIR-001"
+  },
+  {
+    "id": "u-citizen-01",
+    "email": "citizen@civisense.org",
+    "password_hash": "scrypt:32768:8:1$vJ2FIafF6KL0LWoA$3069dbc677944f8c287b0d6373dffd1e0516bbb7f825432fef36b985a2750c7a2143d3d73de5c31aa28887f51c9c523c4d0d1b2090079bb880bc77a77a2bf821",
+    "name": "Priyal Singh",
+    "role": "citizen",
+    "phone": "+91 98765 43210"
+  },
+  {
+    "id": "u-citizen-71e32609",
+    "email": "newcitizen_99@civisense.org",
+    "password_hash": "scrypt:32768:8:1$dUUmrMxNYa5dd4PA$d27c38f0184ee9de856b663ab250727ca2a7acd5b8454765925011f78166dca583487bdc8e7408b17d98d1276bc76612c1510512e9e6f99256ee73ca7d3b004f",
+    "name": "Priyanshu",
+    "role": "citizen",
+    "phone": "+91 98765 43210"
+  },
+  {
+    "id": "u-citizen-291953fd",
+    "email": "newcitizen_1793518774@civisense.org",
+    "password_hash": "scrypt:32768:8:1$vI0ULDLQPzOvZ6oK$e17f373f2b52d409a0311361bc219c037e32c5565a74bdc6030d47003198f8757834adf578052a3149ad026835bdf9007ce112cf42f6e0adf9c58796b7044a9c",
+    "name": "Deepika Barwal",
+    "role": "citizen",
+    "phone": "+91 98765 43210"
+  }
+]

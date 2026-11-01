@@ -164,11 +164,47 @@ Updates the status of an existing complaint.
   }
   ```
 
+### `GET /uploads/<filename>` *(Phase 5)*
+Safely serves uploaded citizen verification images directly from the storage directory via `send_from_directory`.
+
+### `GET /api/reverse-geocode?lat=<lat>&lon=<lon>` *(Phase 5)*
+Queries OpenStreetMap Nominatim with compliant User-Agent headers to convert coordinates into human-readable street addresses with graceful fallback.
+
+---
+
+## 📸 Phase 5 — Photo Submission & OpenStreetMap Geolocation
+
+Phase 5 extends Civisense with end-to-end evidence intake and automatic geographic verification:
+
+1. **Photo Upload & Camera Support:**
+   - Mobile camera capture (`capture="environment"`) and device photo picker.
+   - Client and server-side validation for JPEG, PNG, and WebP up to 10MB.
+   - Magic byte inspection and Pillow verification to reject disguised or corrupt files.
+   - Instant preview with replace and remove options.
+
+2. **Automatic Browser Geolocation:**
+   - Obtains high-accuracy device coordinates via `navigator.geolocation.getCurrentPosition()`.
+   - Records latitude, longitude, GPS accuracy in meters, and submission timestamp.
+   - Robust error handling for permission denial, timeout, and insecure contexts.
+
+3. **Leaflet & OpenStreetMap Visualization:**
+   - Renders interactive Leaflet map preview with official OpenStreetMap tiles and attribution.
+   - Places interactive location marker and displays coordinates.
+   - Graceful tile-loading degradation warning if tiles are delayed.
+
+4. **Nominatim Reverse Geocoding:**
+   - Automatically resolves latitude and longitude into readable locality addresses.
+   - Coordinates remain authoritative if reverse geocoding is unavailable.
+
+5. **Unified Multipart Intake:**
+   - Submits photo, coordinates, accuracy, and problem description in a single `multipart/form-data` transaction.
+   - Saves image to isolated `uploads/` directory with collision-free UUID filenames.
+
 ---
 
 ## 🧪 Testing the Flask Backend
 
-Run the automated backend test suite (isolated in temporary storage):
+Run the automated backend test suite (21 automated scenarios covering Phases 1–5):
 
 ```bash
 python test_backend.py
@@ -182,6 +218,16 @@ This verifies:
 5. Status update validation and 404 for nonexistent complaints.
 6. Data persistence across simulated server restarts.
 7. Graceful handling of AI service exceptions and fallback preservation.
+8. Status progression (`Pending` -> `In Progress` -> `Resolved`).
+9. Phase 5 multipart photo & coordinates report submission and physical persistence.
+10. Missing photo rejection (HTTP 400).
+11. Unsupported file extension rejection (HTTP 400).
+12. Disguised fake image rejection via binary signature inspection (HTTP 400).
+13. Out-of-bounds latitude rejection (HTTP 400) and orphaned file cleanup.
+14. Out-of-bounds longitude rejection (HTTP 400).
+15. Non-positive accuracy rejection (HTTP 400).
+16. Reverse-geocode parameter validation.
+17. Path traversal prevention on `/uploads/`.
 
 ---
 
@@ -191,3 +237,4 @@ This verifies:
 However, JSON file persistence is intended strictly for local development and hackathon prototypes:
 - It does **not** support concurrent multi-worker write locking.
 - For production workloads, migrate storage to an ACID-compliant database such as PostgreSQL or SQLite.
+

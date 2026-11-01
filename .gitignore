@@ -23,3 +23,7 @@ Thumbs.db
 
 # Local data overrides if needed (keep complaints.json committed as starter unless configured otherwise)
 # complaints_local.json
+
+# User uploads (Phase 5)
+uploads/
+

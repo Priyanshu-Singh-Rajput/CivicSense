@@ -9,6 +9,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Leaflet.js CSS for OpenStreetMap Interactive Map Visualization -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 </head>
 <body>
     <div class="app-layout">
@@ -40,6 +42,9 @@
                 </button>
             </div>
 
+            <!-- Sidebar User Profile / Auth Widget -->
+            <div id="sidebar-user-container" class="sidebar-user-container"></div>
+
             <div class="sidebar-footer">
                 <p>AI-Assisted Civic Complaint Management Demo</p>
                 <small>Powered by Gemma & Flask</small>
@@ -55,6 +60,7 @@
                     <p class="page-subtitle">Real-time municipal grievance triage, AI assessment, and authority resolution.</p>
                 </div>
                 <div class="header-actions">
+                    <div id="header-auth-container" class="header-auth-group"></div>
                     <button class="btn btn-secondary" id="refresh-btn" type="button" title="Refresh dashboard data">
                         <span aria-hidden="true">🔄</span>
                         <span>Refresh</span>
@@ -190,60 +196,225 @@
         </main>
     </div>
 
-    <!-- Modal 1: Report an Issue -->
+    <!-- Modal 1: Report an Issue (Phase 5: Photo + OpenStreetMap Automatic Location) -->
     <div id="report-modal" class="modal-overlay" aria-hidden="true" role="dialog" aria-labelledby="report-modal-title">
-        <div class="modal-card">
+        <div class="modal-card modal-lg">
             <div class="modal-header">
                 <div>
+                    <div class="modal-state-indicator">
+                        <span class="state-pill state-1" id="submission-state-pill">1. No Photo Selected</span>
+                    </div>
                     <h2 id="report-modal-title" class="modal-title">Report a Civic Problem</h2>
-                    <p class="modal-subtitle">Submit details of infrastructure damage, utility disruption, or hazards.</p>
+                    <p class="modal-subtitle">Submit a verified photo and your device location for immediate municipal triage.</p>
                 </div>
                 <button type="button" class="modal-close-btn" id="report-modal-close" aria-label="Close modal">&times;</button>
             </div>
 
+            <!-- Success Confirmation Screen (State 7) -->
+            <div id="submission-success-view" class="submission-success-view" style="display: none;">
+                <div class="success-icon-badge" aria-hidden="true">🎉</div>
+                <h3 class="success-title">Civic Report Registered Successfully!</h3>
+                <p class="success-desc">Your photo and verified GPS coordinates have been safely recorded and categorized by Gemma AI.</p>
+                
+                <div class="success-card-summary">
+                    <div class="success-id-chip">
+                        <span>Report ID:</span>
+                        <strong id="success-report-id">c-xxxxxx</strong>
+                    </div>
+                    <div class="success-meta-chips" id="success-meta-chips"></div>
+                </div>
+
+                <div class="success-actions">
+                    <button type="button" class="btn btn-primary" id="success-view-details-btn">View in Dashboard</button>
+                    <button type="button" class="btn btn-secondary" id="success-new-report-btn">Report Another Problem</button>
+                </div>
+            </div>
+
+            <!-- Main Submission Form -->
             <form id="report-form" novalidate>
-                <div class="form-group">
-                    <div class="label-row">
-                        <label for="complaint-description" class="form-label">Problem Description <span class="required-star">*</span></label>
-                        <span class="char-count" id="desc-char-count">0 / 2000</span>
+                <!-- Section A: Photo Capture and Upload -->
+                <div class="form-section">
+                    <div class="section-label-row">
+                        <label class="form-label section-label">
+                            <span class="section-step-num">1</span>
+                            <span>Issue Photo Verification <span class="required-star">*</span></span>
+                        </label>
+                        <span class="label-hint">JPEG, PNG, WebP (Max 10MB)</span>
                     </div>
-                    <textarea
-                        id="complaint-description"
-                        class="form-control textarea"
-                        rows="4"
-                        placeholder="Describe the civic problem, such as a damaged road, overflowing drain, broken streetlight, or water supply issue."
-                        maxlength="2000"
-                        required
-                    ></textarea>
-                    <div class="field-error" id="desc-error"></div>
-                </div>
 
-                <div class="form-group">
-                    <div class="label-row">
-                        <label for="complaint-location" class="form-label">Location / Landmark <span class="required-star">*</span></label>
-                        <span class="char-count" id="loc-char-count">0 / 200</span>
-                    </div>
+                    <!-- Hidden mobile-friendly file inputs -->
                     <input
-                        type="text"
-                        id="complaint-location"
-                        class="form-control"
-                        placeholder="Enter the area, street, landmark, or locality."
-                        maxlength="200"
-                        required
+                        type="file"
+                        id="photo-input-camera"
+                        accept="image/jpeg,image/png,image/webp,image/*"
+                        capture="environment"
+                        style="display: none;"
+                        aria-label="Take photo with camera"
                     >
-                    <div class="field-error" id="loc-error"></div>
+                    <input
+                        type="file"
+                        id="photo-input-file"
+                        accept="image/jpeg,image/png,image/webp,image/*"
+                        style="display: none;"
+                        aria-label="Upload photo from device"
+                    >
+
+                    <!-- State 1: Dropzone / Selection Prompt -->
+                    <div id="photo-dropzone" class="photo-dropzone">
+                        <div class="dropzone-icon" aria-hidden="true">📸</div>
+                        <h4 class="dropzone-title">Take or Upload an Issue Photo</h4>
+                        <p class="dropzone-subtitle">Clear on-site photographs allow civic engineers to assess road, drainage, and hazard severity accurately.</p>
+                        <div class="dropzone-buttons">
+                            <button type="button" class="btn btn-primary" id="btn-camera-trigger">
+                                <span aria-hidden="true">📷</span>
+                                <span>Take Photo (Camera)</span>
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="btn-file-trigger">
+                                <span aria-hidden="true">📁</span>
+                                <span>Select From Device</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- State 2: Photo Preview Card -->
+                    <div id="photo-preview-card" class="photo-preview-card" style="display: none;">
+                        <div class="preview-img-wrapper">
+                            <img id="photo-preview-img" alt="Captured civic issue preview" class="photo-preview-img">
+                        </div>
+                        <div class="photo-info-column">
+                            <div class="photo-meta-header">
+                                <span class="photo-name" id="photo-name-text">photo.jpg</span>
+                                <span class="photo-size" id="photo-size-text">-- KB</span>
+                            </div>
+                            <span class="photo-badge-verified">✓ Image Loaded & Validated</span>
+                            <div class="photo-control-buttons">
+                                <button type="button" class="btn btn-sm btn-secondary" id="btn-replace-photo">
+                                    <span aria-hidden="true">🔄</span>
+                                    <span>Replace Photo</span>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger" id="btn-remove-photo">
+                                    <span aria-hidden="true">🗑️</span>
+                                    <span>Remove Photo</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field-error" id="photo-error"></div>
                 </div>
 
+                <!-- Section B: Automatic Location Capture & OpenStreetMap -->
+                <div class="form-section">
+                    <div class="section-label-row">
+                        <label class="form-label section-label">
+                            <span class="section-step-num">2</span>
+                            <span>GPS Location & OpenStreetMap <span class="required-star">*</span></span>
+                        </label>
+                        <button type="button" class="btn btn-sm btn-secondary" id="btn-detect-location">
+                            <span aria-hidden="true">🎯</span>
+                            <span id="btn-detect-location-text">Detect GPS Location</span>
+                        </button>
+                    </div>
+
+                    <!-- Privacy & Geolocation Notice -->
+                    <div class="location-notice-box">
+                        <span class="notice-icon" aria-hidden="true">📍</span>
+                        <div class="notice-text">
+                            <strong>Automatic Browser Geolocation</strong>
+                            <p>Your coordinates will be automatically recorded to place a pin on the OpenStreetMap preview. Coordinates are verified and attached to the report.</p>
+                        </div>
+                    </div>
+
+                    <!-- Geolocation Error / Warning Banner -->
+                    <div id="location-error-alert" class="alert-box alert-error" style="display: none;" role="alert">
+                        <span class="alert-icon" aria-hidden="true">⚠️</span>
+                        <div class="alert-content" id="location-error-message"></div>
+                    </div>
+
+                    <!-- Coordinates and Resolved Address Readout (States 4 & 5) -->
+                    <div id="location-details-bar" class="location-details-bar" style="display: none;">
+                        <div class="coord-chips">
+                            <span class="chip chip-coords" id="chip-latitude">Lat: --</span>
+                            <span class="chip chip-coords" id="chip-longitude">Lon: --</span>
+                            <span class="chip chip-accuracy" id="chip-accuracy">Accuracy: ±-- m</span>
+                        </div>
+                        <div class="resolved-address-row" id="resolved-address-row">
+                            <span class="address-icon" aria-hidden="true">📫</span>
+                            <span class="address-text" id="resolved-address-text">Fetching address via OpenStreetMap Nominatim...</span>
+                        </div>
+                    </div>
+
+                    <!-- Leaflet & OpenStreetMap Container (State 5) -->
+                    <div id="map-preview-wrapper" class="map-preview-wrapper" style="display: none;">
+                        <div id="location-map" class="leaflet-map-container" aria-label="Interactive OpenStreetMap preview"></div>
+                        <div class="map-legend-row">
+                            <span class="map-legend-item"><span class="legend-pin">📍</span> Your Reported Location</span>
+                            <span class="map-attribution">Map &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</span>
+                        </div>
+                        <div id="map-tile-warning" class="map-tile-warning" style="display: none;">
+                            <span>⚠️ Tile service delayed. Your captured coordinates remain authoritative.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section C: Description & Landmark -->
+                <div class="form-section">
+                    <div class="section-label-row">
+                        <label class="form-label section-label">
+                            <span class="section-step-num">3</span>
+                            <span>Problem Description & Landmark <span class="required-star">*</span></span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="complaint-description" class="form-label">Problem Description <span class="required-star">*</span></label>
+                            <span class="char-count" id="desc-char-count">0 / 2000</span>
+                        </div>
+                        <textarea
+                            id="complaint-description"
+                            class="form-control textarea"
+                            rows="3"
+                            placeholder="Describe the issue (e.g. hazardous pothole on westbound lane, overflowing sewage drain, dangling electrical wire)."
+                            maxlength="2000"
+                            required
+                        ></textarea>
+                        <div class="field-error" id="desc-error"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="label-row">
+                            <label for="complaint-location" class="form-label">Area / Street / Landmark (Auto-filled from GPS)</label>
+                            <span class="char-count" id="loc-char-count">0 / 200</span>
+                        </div>
+                        <input
+                            type="text"
+                            id="complaint-location"
+                            class="form-control"
+                            placeholder="Locality, street name, or nearby landmark (auto-populated by OpenStreetMap)."
+                            maxlength="200"
+                        >
+                        <div class="field-error" id="loc-error"></div>
+                    </div>
+                </div>
+
+                <!-- AI Notice -->
                 <div class="ai-notice-box">
                     <span class="ai-notice-icon" aria-hidden="true">🤖</span>
-                    <p>Upon submission, Gemma AI will automatically assess category, severity, and recommend next actions for municipal teams.</p>
+                    <p>Gemma AI will automatically analyze your report, determine priority severity, and route it to the proper municipal department.</p>
                 </div>
 
+                <!-- Global Form Error Banner (State 8: Submission Failed) -->
+                <div id="form-global-error" class="alert-box alert-error" style="display: none;" role="alert">
+                    <span class="alert-icon" aria-hidden="true">❌</span>
+                    <div class="alert-content" id="form-global-error-text"></div>
+                </div>
+
+                <!-- Modal Actions -->
                 <div class="modal-actions">
                     <button type="button" class="btn btn-secondary" id="report-modal-cancel">Cancel</button>
                     <button type="submit" class="btn btn-primary" id="report-submit-btn">
                         <span id="submit-spinner" class="btn-spinner" style="display: none;" aria-hidden="true"></span>
-                        <span id="submit-btn-text">Submit Complaint</span>
+                        <span id="submit-btn-text">Submit Photo & Verified Location</span>
                     </button>
                 </div>
             </form>
@@ -277,6 +448,9 @@
                         </select>
                         <button type="button" class="btn btn-primary" id="save-status-btn">Update Status</button>
                     </div>
+                    <div id="status-citizen-notice" class="citizen-privilege-note" style="display: none; margin-top: 8px;">
+                        <span>🛡️ Status updates are restricted to authorized Municipal Officers.</span>
+                    </div>
                     <div class="field-error" id="status-update-error"></div>
                 </div>
                 <button type="button" class="btn btn-secondary" id="details-close-btn">Close</button>
@@ -284,6 +458,8 @@
         </div>
     </div>
 
+    <!-- Leaflet.js Script for OpenStreetMap -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="/static/script.js"></script>
 </body>
 </html>

@@ -16,11 +16,22 @@ Tests the 11 required scenarios:
 
 import json
 import unittest
+import io
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
+from PIL import Image
 
 from app import app
+
+
+def create_test_image(format="PNG") -> io.BytesIO:
+    """Generates a small in-memory valid image for tests."""
+    img = Image.new("RGB", (20, 20), color="blue")
+    buf = io.BytesIO()
+    img.save(buf, format=format)
+    buf.seek(0)
+    return buf
 
 
 class TestCivisenseBackend(unittest.TestCase):
@@ -32,8 +43,12 @@ class TestCivisenseBackend(unittest.TestCase):
         with open(self.test_storage, "w", encoding="utf-8") as f:
             f.write("[]")
 
-        # Configure Flask app to use isolated storage
+        self.test_upload_dir = Path(self.temp_dir.name) / "uploads"
+        self.test_upload_dir.mkdir(parents=True, exist_ok=True)
+
+        # Configure Flask app to use isolated storage and upload folder
         app.config["STORAGE_PATH"] = self.test_storage
+        app.config["UPLOAD_FOLDER"] = self.test_upload_dir
         app.config["TESTING"] = True
         self.client = app.test_client()
 
@@ -215,6 +230,154 @@ class TestCivisenseBackend(unittest.TestCase):
         p2 = self.client.patch(f"/api/complaints/{cid}", json={"status": "Resolved"})
         self.assertEqual(p2.status_code, 200)
         self.assertEqual(p2.get_json()["complaint"]["status"], "Resolved")
+
+    @patch("app.analyze_complaint")
+    def test_13_create_complaint_with_photo_and_location(self, mock_ai):
+        """13. Phase 5: Multipart photo & location report is saved with image & coordinates."""
+        mock_ai.return_value = {
+            "category": "Road", "severity": "High", "department": "Public Works",
+            "summary": "Deep pothole dangerous to motorists",
+            "recommended_action": "Fill pothole immediately",
+            "ai_status": "success"
+        }
+
+        image_stream = create_test_image("PNG")
+        data = {
+            "photo": (image_stream, "pothole.png", "image/png"),
+            "latitude": "12.971598",
+            "longitude": "77.594566",
+            "accuracy": "14.5",
+            "description": "Deep pothole on MG Road near metro station",
+            "location": "MG Road",
+            "address": "MG Road, Bengaluru, Karnataka, India"
+        }
+
+        response = self.client.post("/api/complaints", data=data, content_type="multipart/form-data")
+        self.assertEqual(response.status_code, 201)
+        res_data = response.get_json()
+        self.assertTrue(res_data["success"])
+        complaint = res_data["complaint"]
+
+        self.assertTrue(complaint["id"].startswith("c-"))
+        self.assertEqual(complaint["latitude"], 12.971598)
+        self.assertEqual(complaint["longitude"], 77.594566)
+        self.assertEqual(complaint["accuracy"], 14.5)
+        self.assertEqual(complaint["address"], "MG Road, Bengaluru, Karnataka, India")
+        self.assertTrue(complaint["photo_url"].startswith("/uploads/"))
+        self.assertTrue(complaint["photo_filename"].endswith(".png"))
+
+        # Verify physical file existence in test_upload_dir
+        saved_file = self.test_upload_dir / complaint["photo_filename"]
+        self.assertTrue(saved_file.exists())
+        self.assertGreater(saved_file.stat().st_size, 0)
+
+        # Verify serving via /uploads/<filename>
+        get_photo = self.client.get(complaint["photo_url"])
+        self.assertEqual(get_photo.status_code, 200)
+        get_photo.close()
+
+    def test_14_multipart_missing_photo_rejected(self):
+        """14. Phase 5: Multipart submission without photo is rejected (HTTP 400)."""
+        data = {
+            "latitude": "12.971598",
+            "longitude": "77.594566",
+            "accuracy": "10.0",
+            "description": "Missing photo test"
+        }
+        response = self.client.post("/api/complaints", data=data, content_type="multipart/form-data")
+        self.assertEqual(response.status_code, 400)
+        res_data = response.get_json()
+        self.assertFalse(res_data["success"])
+        self.assertIn("photo", res_data["error"].lower())
+
+    def test_15_multipart_invalid_image_extension_rejected(self):
+        """15. Phase 5: Unsupported file extension is rejected (HTTP 400)."""
+        fake_file = io.BytesIO(b"echo 'malicious script'")
+        data = {
+            "photo": (fake_file, "exploit.sh", "text/x-sh"),
+            "latitude": "12.971598",
+            "longitude": "77.594566",
+            "accuracy": "10.0"
+        }
+        response = self.client.post("/api/complaints", data=data, content_type="multipart/form-data")
+        self.assertEqual(response.status_code, 400)
+        res_data = response.get_json()
+        self.assertFalse(res_data["success"])
+        self.assertIn("extension", res_data["error"].lower())
+
+    def test_16_multipart_fake_image_magic_bytes_rejected(self):
+        """16. Phase 5: Disguised non-image file with .jpg extension is rejected (HTTP 400)."""
+        fake_file = io.BytesIO(b"This is not a real jpeg file header")
+        data = {
+            "photo": (fake_file, "fake.jpg", "image/jpeg"),
+            "latitude": "12.971598",
+            "longitude": "77.594566",
+            "accuracy": "10.0"
+        }
+        response = self.client.post("/api/complaints", data=data, content_type="multipart/form-data")
+        self.assertEqual(response.status_code, 400)
+        res_data = response.get_json()
+        self.assertFalse(res_data["success"])
+
+    def test_17_multipart_invalid_latitude_rejected(self):
+        """17. Phase 5: Out-of-bounds latitude is rejected (HTTP 400) and cleans up file."""
+        image_stream = create_test_image("PNG")
+        data = {
+            "photo": (image_stream, "test.png", "image/png"),
+            "latitude": "95.5",  # Out of bounds (>90)
+            "longitude": "77.594566",
+            "accuracy": "10.0"
+        }
+        response = self.client.post("/api/complaints", data=data, content_type="multipart/form-data")
+        self.assertEqual(response.status_code, 400)
+        res_data = response.get_json()
+        self.assertFalse(res_data["success"])
+        self.assertIn("latitude", res_data["error"].lower())
+        # Verify no orphaned image left in test_upload_dir
+        self.assertEqual(len(list(self.test_upload_dir.glob("*"))), 0)
+
+    def test_18_multipart_invalid_longitude_rejected(self):
+        """18. Phase 5: Out-of-bounds longitude is rejected (HTTP 400)."""
+        image_stream = create_test_image("PNG")
+        data = {
+            "photo": (image_stream, "test.png", "image/png"),
+            "latitude": "12.971598",
+            "longitude": "-185.0",  # Out of bounds (<-180)
+            "accuracy": "10.0"
+        }
+        response = self.client.post("/api/complaints", data=data, content_type="multipart/form-data")
+        self.assertEqual(response.status_code, 400)
+        res_data = response.get_json()
+        self.assertFalse(res_data["success"])
+        self.assertIn("longitude", res_data["error"].lower())
+
+    def test_19_multipart_negative_accuracy_rejected(self):
+        """19. Phase 5: Accuracy <= 0 is rejected (HTTP 400)."""
+        image_stream = create_test_image("PNG")
+        data = {
+            "photo": (image_stream, "test.png", "image/png"),
+            "latitude": "12.971598",
+            "longitude": "77.594566",
+            "accuracy": "-5.0"  # Invalid non-positive accuracy
+        }
+        response = self.client.post("/api/complaints", data=data, content_type="multipart/form-data")
+        self.assertEqual(response.status_code, 400)
+        res_data = response.get_json()
+        self.assertFalse(res_data["success"])
+        self.assertIn("accuracy", res_data["error"].lower())
+
+    def test_20_reverse_geocode_validation(self):
+        """20. Phase 5: Reverse geocode endpoint validates query bounds."""
+        res_missing = self.client.get("/api/reverse-geocode")
+        self.assertEqual(res_missing.status_code, 400)
+
+        res_oob = self.client.get("/api/reverse-geocode?lat=120&lon=200")
+        self.assertEqual(res_oob.status_code, 400)
+
+    def test_21_path_traversal_prevention(self):
+        """21. Phase 5: Path traversal attempts on /uploads are rejected."""
+        res = self.client.get("/uploads/../test_complaints.json")
+        self.assertIn(res.status_code, [400, 404])
 
 
 if __name__ == "__main__":
